@@ -9,6 +9,7 @@ import UIKit
 import FirebaseCore
 import FirebaseMessaging
 import UserNotifications
+import PushKit
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUserNotificationCenterDelegate {
@@ -19,7 +20,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUser
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         FirebaseApp.configure()
-        
+        // Registra voip (pushkit)
+        self.voipRegistration()
         // Configuração da janela para iOS 12 ou anterior
         if #available(iOS 13.0, *) {
             // A configuração será feita no SceneDelegate
@@ -129,11 +131,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUser
         let content = UNMutableNotificationContent()
         content.title = "Renann Antunes está querendo entrar"
         content.body = "Interaja com a notificação para Aceitar ou Recusar."
-        content.sound = UNNotificationSound(named: UNNotificationSoundName(rawValue: "out2.caf"))
+        content.sound =  .default
         content.categoryIdentifier = "VISITOR_REQUEST"
-        
+
         // Add vibration pattern to notification
-        content.userInfo = ["vibrationPattern": "long"]
+//       content.userInfo = ["vibrationPattern": "long"]
         
         // Adicionando botões de texto diretamente no corpo da notificação
         content.userInfo = ["ACCEPT_ACTION": "ACCEPT_ACTION", "REJECT_ACTION": "REJECT_ACTION"]
@@ -147,6 +149,39 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate, UNUser
             }
         }
     }
+    
+    // Register for VoIP notifications
+    func voipRegistration() {
+        let mainQueue = DispatchQueue.main
+        let voipRegistry: PKPushRegistry = PKPushRegistry(queue: mainQueue)
+        voipRegistry.delegate = self
+        voipRegistry.desiredPushTypes = [PKPushType.voIP]
+    }
 
 }
 
+//MARK: - PKPushRegistryDelegate
+extension AppDelegate: PKPushRegistryDelegate {
+
+    func pushRegistry(_ registry: PKPushRegistry, didUpdate credentials: PKPushCredentials, for type: PKPushType) {
+        print(credentials.token)
+        let deviceToken = credentials.token.map { String(format: "%02x", $0) }.joined()
+        print("pushRegistry -> deviceToken :\(deviceToken)")
+    }
+
+    func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
+        print("pushRegistry:didInvalidatePushTokenForType:")
+    }
+ 
+    // Handle incoming pushes
+    func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType, completion: @escaping () -> Void) {
+        print("dictionaryPayload:::", payload.dictionaryPayload)
+        let payloadDict = payload.dictionaryPayload["aps"] as? [String: Any] ?? [:]
+        print("payloadDict:::", payloadDict)
+        sendLocalNotification()
+        completion()
+    }
+    func applicationWillTerminate(_ application: UIApplication) {
+           print("applicationWillTerminate")
+    }
+}

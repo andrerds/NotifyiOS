@@ -65,9 +65,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     func handleNotificationResponse(_ response: UNNotificationResponse) {
+//        VibrationService.stopLongVibrate()
         // Process notification response
         switch response.actionIdentifier {
         case "ACCEPT_ACTION":
+           
             print("Aceitou")
         case "REJECT_ACTION":
             print("Recusou")
